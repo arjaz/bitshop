@@ -1,0 +1,11 @@
+* Goals
+** TODO Back-end [0/6]:
+   It's done using Django as a framework with Python/Coconut as a language
+   - [ ] Authentication system
+   - [ ] Shops registration
+   - [ ] Shared shop ownership
+   - [ ] Placing goods
+   - [ ] Buying goods
+   - [ ] Public API
+** TODO Front-end:
+   It's done using React as a framework with Javascript/Typescript/Purescript as a language
