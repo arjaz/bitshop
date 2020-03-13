@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# __coconut_hash__ = 0xf5bb3d54
+# __coconut_hash__ = 0xf1a83147
 
 # Compiled with Coconut version 1.4.3 [Ernest Scribbler]
 
@@ -33,8 +33,8 @@ class Customer(models.Model):  # line 10: class Customer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)  # line 11:     user = models.OneToOneField(User, on_delete=models.CASCADE)
     wallet = models.OneToOneField(Wallet, on_delete=models.CASCADE, unique=True)  # line 12:     wallet = models.OneToOneField(Wallet, on_delete=models.CASCADE, unique=True)
 
-    def __str__(self):  # line 14:     def __str__(self) = user.name
-        return user.name  # line 14:     def __str__(self) = user.name
+    def __str__(self):  # line 14:     def __str__(self) = self.user.username
+        return self.user.username  # line 14:     def __str__(self) = self.user.username
 
 
 class Category(models.Model):  # line 17: class Category(models.Model):
@@ -50,22 +50,24 @@ class Category(models.Model):  # line 17: class Category(models.Model):
 
 class Shop(models.Model):  # line 27: class Shop(models.Model):
     name = models.CharField(max_length=50, unique=True)  # line 28:     name = models.CharField(max_length=50, unique=True)
-    image = models.ImageField(blank=True, upload_to="images/shops")  # line 29:     image = models.ImageField(blank=True, upload_to="images/shops")
-    wallet = models.OneToOneField(Wallet, on_delete=models.CASCADE, unique=True)  # line 30:     wallet = models.OneToOneField(Wallet, on_delete=models.CASCADE, unique=True)
-    owners = models.ManyToManyField(Customer)  # line 31:     owners = models.ManyToManyField(Customer)
+    slug = models.SlugField(max_length=50, unique=True)  # line 29:     slug = models.SlugField(max_length=50, unique=True)
+    image = models.ImageField(blank=True, upload_to="images/shops")  # line 30:     image = models.ImageField(blank=True, upload_to="images/shops")
+    wallet = models.OneToOneField(Wallet, on_delete=models.CASCADE, unique=True)  # line 31:     wallet = models.OneToOneField(Wallet, on_delete=models.CASCADE, unique=True)
+    owners = models.ManyToManyField(Customer)  # line 32:     owners = models.ManyToManyField(Customer)
 
-    def __str__(self):  # line 33:     def __str__(self) = self.name
-        return self.name  # line 33:     def __str__(self) = self.name
+    def __str__(self):  # line 34:     def __str__(self) = self.name
+        return self.name  # line 34:     def __str__(self) = self.name
 
 
-class Product(models.Model):  # line 36: class Product(models.Model):
-    name = models.CharField(max_length=50)  # line 37:     name = models.CharField(max_length=50)
-    stock = models.PositiveIntegerField()  # line 38:     stock = models.PositiveIntegerField()
-    image = models.ImageField(blank=True, upload_to="images/products")  # line 39:     image = models.ImageField(blank=True, upload_to="images/products")
+class Product(models.Model):  # line 37: class Product(models.Model):
+    name = models.CharField(max_length=50)  # line 38:     name = models.CharField(max_length=50)
+    slug = models.SlugField(max_length=50, unique=True)  # line 39:     slug = models.SlugField(max_length=50, unique=True)
+    stock = models.PositiveIntegerField()  # line 40:     stock = models.PositiveIntegerField()
+    image = models.ImageField(blank=True, upload_to="images/products")  # line 41:     image = models.ImageField(blank=True, upload_to="images/products")
 # satoshi
-    price = models.PositiveIntegerField()  # line 41:     price = models.PositiveIntegerField()
-    category = models.ForeignKey(Category, on_delete=models.CASCADE)  # line 42:     category = models.ForeignKey(Category, on_delete=models.CASCADE)
-    shop = models.ForeignKey(Shop, on_delete=models.CASCADE)  # line 43:     shop = models.ForeignKey(Shop, on_delete=models.CASCADE)
+    price = models.PositiveIntegerField()  # line 43:     price = models.PositiveIntegerField()
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)  # line 44:     category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE)  # line 45:     shop = models.ForeignKey(Shop, on_delete=models.CASCADE)
 
-    def __str__(self):  # line 45:     def __str__(self) = self.name
-        return self.name  # line 45:     def __str__(self) = self.name
+    def __str__(self):  # line 47:     def __str__(self) = self.name
+        return self.name  # line 47:     def __str__(self) = self.name
