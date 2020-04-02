@@ -14,6 +14,7 @@ class Customer(models.Model):
                                   unique=True)
 
     def __str__(self):
+        # return self.user.name
         return self.user.username
 
 
@@ -35,7 +36,7 @@ class Shop(models.Model):
     wallet = models.OneToOneField(Wallet,
                                   on_delete=models.CASCADE,
                                   unique=True)
-    owners = models.ManyToManyField(Customer)
+    holders = models.ManyToManyField(Customer)
 
     def __str__(self):
         return self.name

@@ -6,6 +6,7 @@ from rest_framework import permissions
 from .models import Wallet, Customer, Category, Shop, Product
 from .serializers import UserSerializer, GroupSerializer, CustomerSerializer, ShopSerializer, ProductSerializer, WalletSerializer, CategorySerializer
 
+# TODO: Permissions
 
 class UserViewSet(viewsets.ModelViewSet):
     """
@@ -13,7 +14,7 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     queryset = User.objects.all().order_by('-date_joined')
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
 
 class GroupViewSet(viewsets.ModelViewSet):
@@ -22,7 +23,7 @@ class GroupViewSet(viewsets.ModelViewSet):
     """
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
 
 class CustomerViewSet(viewsets.ModelViewSet):
@@ -31,7 +32,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
     """
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -40,7 +41,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
     """
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
 
 class ShopViewSet(viewsets.ModelViewSet):
@@ -49,7 +50,7 @@ class ShopViewSet(viewsets.ModelViewSet):
     """
     queryset = Shop.objects.all()
     serializer_class = ShopSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -58,7 +59,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     """
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
 
 class WalletViewSet(viewsets.ModelViewSet):
@@ -67,4 +68,4 @@ class WalletViewSet(viewsets.ModelViewSet):
     """
     queryset = Wallet.objects.all()
     serializer_class = WalletSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
