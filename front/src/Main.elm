@@ -5,21 +5,29 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Http
-import Json.Decode exposing (Decoder, field, string)
+import Json.Decode exposing (Decoder, field, int, string)
 
 
 
 -- MODEL
 
 
-type Model
-    = Failure String
-    | Loading
-    | Success Shops
+type alias Model =
+    { shops : ShopsResult
+    }
+
+
+type ShopsResult
+    = ShopsFailure String
+    | ShopsLoading
+    | ShopsSuccess Shops
 
 
 type alias Shop =
-    String
+    { id : Int
+    , name : String
+    , slug : String
+    }
 
 
 type alias Shops =
@@ -28,7 +36,7 @@ type alias Shops =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( Loading, fetchShops )
+    ( { shops = ShopsLoading }, fetchShops )
 
 
 
@@ -45,7 +53,7 @@ fetchShops =
 
 shopDecoder : Decoder Shop
 shopDecoder =
-    field "name" string
+    Json.Decode.map3 Shop (field "id" int) (field "name" string) (field "slug" string)
 
 
 shopsDecoder : Decoder Shops
@@ -67,24 +75,24 @@ update msg model =
         FetchedShops result ->
             case result of
                 Ok shops ->
-                    ( Success shops, Cmd.none )
+                    ( { shops = ShopsSuccess shops }, Cmd.none )
 
                 Err err ->
                     case err of
                         Http.BadUrl url ->
-                            ( Failure url, Cmd.none )
+                            ( { shops = ShopsFailure url }, Cmd.none )
 
                         Http.Timeout ->
-                            ( Failure "timeout", Cmd.none )
+                            ( { shops = ShopsFailure "timeout" }, Cmd.none )
 
                         Http.NetworkError ->
-                            ( Failure "network error", Cmd.none )
+                            ( { shops = ShopsFailure "network error" }, Cmd.none )
 
                         Http.BadStatus status ->
-                            ( Failure (String.fromInt status), Cmd.none )
+                            ( { shops = ShopsFailure (String.fromInt status) }, Cmd.none )
 
                         Http.BadBody body ->
-                            ( Failure body, Cmd.none )
+                            ( { shops = ShopsFailure body }, Cmd.none )
 
 
 
@@ -101,15 +109,15 @@ view model =
 
 viewShops : Model -> Html Msg
 viewShops model =
-    case model of
-        Failure err ->
+    case model.shops of
+        ShopsFailure err ->
             div [] [ text ("Failed to load shops: " ++ err) ]
 
-        Loading ->
-            div [] [ text "Loading..." ]
+        ShopsLoading ->
+            div [] [ text "ShopsLoading..." ]
 
-        Success shops ->
-            div [] [ ul [] (List.map (\shop -> li [] [ text shop ]) shops) ]
+        ShopsSuccess shops ->
+            div [] [ ul [] (List.map (\shop -> li [] [ text shop ]) (List.map .name shops)) ]
 
 
 
