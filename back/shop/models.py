@@ -14,13 +14,16 @@ class Customer(models.Model):
                                   unique=True)
 
     def __str__(self):
-        # return self.user.name
         return self.user.username
 
 
 class Category(models.Model):
     name = models.CharField(max_length=50, unique=True)
     slug = models.SlugField(max_length=50, unique=True)
+    products = models.ManyToManyField('Product', related_name='categories')
+    parent = models.ForeignKey('self',
+                               related_name='children',
+                               on_delete=models.CASCADE)
 
     class Meta:
         verbose_name_plural = "categories"
@@ -32,7 +35,8 @@ class Category(models.Model):
 class Shop(models.Model):
     name = models.CharField(max_length=50, unique=True)
     slug = models.SlugField(max_length=50, unique=True)
-    image = models.ImageField(blank=True, upload_to="images/shops")
+
+    # image = models.ImageField(blank=True, upload_to="images/shops")
     wallet = models.OneToOneField(Wallet,
                                   on_delete=models.CASCADE,
                                   unique=True)
@@ -49,7 +53,6 @@ class Product(models.Model):
     image = models.ImageField(blank=True, upload_to="images/products")
     # satoshi
     price = models.PositiveIntegerField()
-    category = models.ForeignKey(Category, on_delete=models.CASCADE)
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE)
 
     def __str__(self):

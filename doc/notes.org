@@ -1,0 +1,28 @@
+* Architecture
+** Back
+*** Some day we will switch to Haskell
+*** Models
+**** Customer
+**** Shop
+**** Product
+**** Category
+**** Wallet
+**** Cart
+** Front
+*** Pages
+**** Front page
+**** Product page
+**** Product list page
+**** Shop page
+**** Profile/Owned shops page
+**** Login page
+**** Sign up page
+* Features
+** Bitcoin as a currency
+** Authentication system (+ OAuth2)
+** Searching
+** Reviews
+** Likes
+** Activation link after registration
+** Filtering
+** Chat

@@ -32,8 +32,10 @@ INSTALLED_APPS = [
     'shop.apps.ShopConfig', 'django.contrib.admin', 'django.contrib.auth',
     'django.contrib.contenttypes', 'django.contrib.sessions',
     'django.contrib.messages', 'django.contrib.staticfiles', 'rest_framework',
-    'corsheaders'
+    'corsheaders', 'graphene_django'
 ]
+
+GRAPHENE = {'SCHEMA': 'shop.schema.schema'}
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
