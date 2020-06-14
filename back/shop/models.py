@@ -53,7 +53,11 @@ class Product(models.Model):
     image = models.ImageField(blank=True, upload_to="images/products")
     # satoshi
     price = models.PositiveIntegerField()
-    shop = models.ForeignKey(Shop, on_delete=models.CASCADE)
+    shop = models.ForeignKey(Shop,
+                             on_delete=models.CASCADE,
+                             related_name='products')
+
+    # TODO: add description
 
     def __str__(self):
         return self.name

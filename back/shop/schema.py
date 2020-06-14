@@ -10,19 +10,29 @@ class ShopType(DjangoObjectType):
         model = Shop
 
 
+class WalletType(DjangoObjectType):
+    class Meta:
+        model = Wallet
+
+
+class CustomerType(DjangoObjectType):
+    class Meta:
+        model = Customer
+
+
 class ProductType(DjangoObjectType):
     class Meta:
         model = Product
 
 
 class Query(graphene.ObjectType):
-    shops = graphene.List(ShopType)
-    products = graphene.List(ProductType)
+    all_shops = graphene.List(ShopType)
+    all_products = graphene.List(ProductType)
 
-    def resolve_shops(self, info):
+    def resolve_all_shops(self, info, **kwargs):
         return Shop.objects.all()
 
-    def resolve_products(self, info):
+    def resolve_all_products(self, info, **kwargs):
         return Product.objects.all()
 
 
