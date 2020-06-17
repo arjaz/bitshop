@@ -14,6 +14,8 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import RemoteData exposing (..)
 import Shops.Object
+import Shops.Object.CategoryType as Category
+import Shops.Object.ProductType as Product
 import Shops.Object.ShopType as Shop
 import Shops.Query as Query
 import Shops.Scalar exposing (Id(..))
@@ -28,6 +30,18 @@ import Shops.ScalarCodecs
         id
         name
         slug
+        products {
+            id
+            name
+            slug
+            stock
+            price
+            category {
+                id
+                name
+                slug
+            }
+        }
     }
    }
 -}
@@ -44,10 +58,30 @@ query =
 
 shopSelection : SelectionSet ShopInfo Shops.Object.ShopType
 shopSelection =
-    SelectionSet.map3 ShopInfo
+    SelectionSet.map4 ShopInfo
         Shop.id
         Shop.name
         Shop.slug
+        (Shop.products productSelection)
+
+
+productSelection : SelectionSet ProductInfo Shops.Object.ProductType
+productSelection =
+    SelectionSet.map6 ProductInfo
+        Product.id
+        Product.name
+        Product.slug
+        Product.stock
+        Product.price
+        (Product.category categorySelection)
+
+
+categorySelection : SelectionSet CategoryInfo Shops.Object.CategoryType
+categorySelection =
+    SelectionSet.map3 CategoryInfo
+        Category.id
+        Category.name
+        Category.slug
 
 
 
@@ -59,6 +93,24 @@ type alias Model =
 
 
 type alias ShopInfo =
+    { id : Shops.ScalarCodecs.Id
+    , name : String
+    , slug : String
+    , products : List ProductInfo
+    }
+
+
+type alias ProductInfo =
+    { id : Shops.ScalarCodecs.Id
+    , name : String
+    , slug : String
+    , stock : Int
+    , price : Int
+    , category : CategoryInfo
+    }
+
+
+type alias CategoryInfo =
     { id : Shops.ScalarCodecs.Id
     , name : String
     , slug : String
@@ -130,6 +182,17 @@ viewShop : ShopInfo -> Html Msg
 viewShop shop =
     div []
         [ text <| "Shop «" ++ shop.name ++ "»"
+        , ul [] <| List.map viewProduct shop.products
+        ]
+
+
+viewProduct : ProductInfo -> Html Msg
+viewProduct product =
+    div []
+        [ text <| "Product «" ++ product.name ++ "»"
+        , text <| "Quantity: " ++ String.fromInt product.stock ++ " items"
+        , text <| "Price: " ++ String.fromInt product.price ++ " satoshi"
+        , text <| "Category: " ++ product.category.name
         ]
 
 
