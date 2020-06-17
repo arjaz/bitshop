@@ -20,10 +20,6 @@ class Customer(models.Model):
 class Category(models.Model):
     name = models.CharField(max_length=50, unique=True)
     slug = models.SlugField(max_length=50, unique=True)
-    products = models.ManyToManyField('Product', related_name='categories')
-    parent = models.ForeignKey('self',
-                               related_name='children',
-                               on_delete=models.CASCADE)
 
     class Meta:
         verbose_name_plural = "categories"
@@ -50,14 +46,17 @@ class Product(models.Model):
     name = models.CharField(max_length=50)
     slug = models.SlugField(max_length=50, unique=True)
     stock = models.PositiveIntegerField()
-    image = models.ImageField(blank=True, upload_to="images/products")
+    # image = models.ImageField(null=True,
+    #                           blank=True,
+    #                           upload_to="images/products")
     # satoshi
     price = models.PositiveIntegerField()
     shop = models.ForeignKey(Shop,
                              on_delete=models.CASCADE,
                              related_name='products')
-
-    # TODO: add description
+    category = models.ForeignKey(Category,
+                                 on_delete=models.CASCADE,
+                                 related_name="products")
 
     def __str__(self):
         return self.name

@@ -25,6 +25,11 @@ class ProductType(DjangoObjectType):
         model = Product
 
 
+class CategoryType(DjangoObjectType):
+    class Meta:
+        model = Category
+
+
 class Query(graphene.ObjectType):
     all_shops = graphene.NonNull(graphene.List(graphene.NonNull(ShopType)))
     all_products = graphene.NonNull(
