@@ -1,11 +1,53 @@
 module Main exposing (Model, Msg(..), init, main, update, view)
 
+-- import Shops.Interface
+-- import Shops.Object.ShopType
+-- import Http
+
 import Browser
+import Graphql.Document as Document
+import Graphql.Http
+import Graphql.Operation exposing (RootQuery)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import Http
-import Json.Decode exposing (Decoder, field, int, string)
+import RemoteData exposing (..)
+import Shops.Object
+import Shops.Object.ShopType as Shop
+import Shops.Query as Query
+import Shops.Scalar exposing (Id(..))
+import Shops.ScalarCodecs
+
+
+
+-- GRAPH_QL
+{-
+   query {
+    shops {
+        id
+        name
+        slug
+    }
+   }
+-}
+
+
+type alias Response =
+    List ShopInfo
+
+
+query : SelectionSet Response RootQuery
+query =
+    Query.allShops shopSelection
+
+
+shopSelection : SelectionSet ShopInfo Shops.Object.ShopType
+shopSelection =
+    SelectionSet.map3 ShopInfo
+        Shop.id
+        Shop.name
+        Shop.slug
 
 
 
@@ -13,52 +55,19 @@ import Json.Decode exposing (Decoder, field, int, string)
 
 
 type alias Model =
-    { shops : ShopsResult
-    }
+    RemoteData (Graphql.Http.Error Response) Response
 
 
-type ShopsResult
-    = ShopsFailure String
-    | ShopsLoading
-    | ShopsSuccess Shops
-
-
-type alias Shop =
-    { id : Int
+type alias ShopInfo =
+    { id : Shops.ScalarCodecs.Id
     , name : String
     , slug : String
     }
 
 
-type alias Shops =
-    List Shop
-
-
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { shops = ShopsLoading }, fetchShops )
-
-
-
--- HTTP
-
-
-fetchShops : Cmd Msg
-fetchShops =
-    Http.get
-        { url = "http://localhost:8000/api/shops/"
-        , expect = Http.expectJson FetchedShops shopsDecoder
-        }
-
-
-shopDecoder : Decoder Shop
-shopDecoder =
-    Json.Decode.map3 Shop (field "id" int) (field "name" string) (field "slug" string)
-
-
-shopsDecoder : Decoder Shops
-shopsDecoder =
-    field "results" (Json.Decode.list shopDecoder)
+    ( RemoteData.Loading, makeRequest )
 
 
 
@@ -66,33 +75,21 @@ shopsDecoder =
 
 
 type Msg
-    = FetchedShops (Result Http.Error Shops)
+    = GotResponse Model
+
+
+makeRequest : Cmd Msg
+makeRequest =
+    query
+        |> Graphql.Http.queryRequest "http://127.0.0.1:8000/graphql/"
+        |> Graphql.Http.send (RemoteData.fromResult >> GotResponse)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
+update msg _ =
     case msg of
-        FetchedShops result ->
-            case result of
-                Ok shops ->
-                    ( { shops = ShopsSuccess shops }, Cmd.none )
-
-                Err err ->
-                    case err of
-                        Http.BadUrl url ->
-                            ( { shops = ShopsFailure url }, Cmd.none )
-
-                        Http.Timeout ->
-                            ( { shops = ShopsFailure "timeout" }, Cmd.none )
-
-                        Http.NetworkError ->
-                            ( { shops = ShopsFailure "network error" }, Cmd.none )
-
-                        Http.BadStatus status ->
-                            ( { shops = ShopsFailure (String.fromInt status) }, Cmd.none )
-
-                        Http.BadBody body ->
-                            ( { shops = ShopsFailure body }, Cmd.none )
+        GotResponse response ->
+            ( response, Cmd.none )
 
 
 
@@ -103,30 +100,37 @@ view : Model -> Html Msg
 view model =
     div []
         [ h1 [] [ text "Shops" ]
-        , viewShops model
+        , viewModel model
         ]
 
 
-viewShops : Model -> Html Msg
-viewShops model =
-    case model.shops of
-        ShopsFailure err ->
-            div [] [ text ("Failed to load shops: " ++ err) ]
+viewModel : Model -> Html Msg
+viewModel model =
+    -- text <| Debug.toString model
+    case model of
+        NotAsked ->
+            text "The shops are not requested yet"
 
-        ShopsLoading ->
-            div [] [ text "ShopsLoading..." ]
+        Success response ->
+            viewShops response
 
-        ShopsSuccess shops ->
-            div [] [ ul [] (List.map (\shop -> li [] [ text shop ]) (List.map .name shops)) ]
+        Loading ->
+            text "Loading"
+
+        Failure _ ->
+            text "Error"
 
 
+viewShops : Response -> Html Msg
+viewShops shops =
+    div [] <| List.map viewShop shops
 
--- SUBSCRIPTIONS
 
-
-subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
+viewShop : ShopInfo -> Html Msg
+viewShop shop =
+    div []
+        [ text <| "Shop «" ++ shop.name ++ "»"
+        ]
 
 
 
@@ -134,4 +138,9 @@ subscriptions _ =
 
 
 main =
-    Browser.element { init = init, update = update, view = view, subscriptions = subscriptions }
+    Browser.element
+        { init = init
+        , update = update
+        , subscriptions = \_ -> Sub.none
+        , view = view
+        }
