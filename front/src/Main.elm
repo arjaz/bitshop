@@ -175,24 +175,24 @@ viewModel model =
 
 viewShops : Response -> Html Msg
 viewShops shops =
-    div [] <| List.map viewShop shops
+    ul [ class "shops-list" ] <| List.map viewShop shops
 
 
 viewShop : ShopInfo -> Html Msg
 viewShop shop =
-    div []
+    div [ class "shop-card" ]
         [ text <| "Shop «" ++ shop.name ++ "»"
-        , ul [] <| List.map viewProduct shop.products
+        , ul [ class "products-list" ] <| List.map viewProduct shop.products
         ]
 
 
 viewProduct : ProductInfo -> Html Msg
 viewProduct product =
     div []
-        [ text <| "Product «" ++ product.name ++ "»"
-        , text <| "Quantity: " ++ String.fromInt product.stock ++ " items"
-        , text <| "Price: " ++ String.fromInt product.price ++ " satoshi"
-        , text <| "Category: " ++ product.category.name
+        [ div [ class "product-name" ] [ text <| "Product «" ++ product.name ++ "»" ]
+        , div [ class "product-stock" ] [ text <| "Quantity: " ++ String.fromInt product.stock ++ " items" ]
+        , div [ class "product-price" ] [ text <| "Price: " ++ String.fromInt product.price ++ " satoshi" ]
+        , div [ class "category-name" ] [ text <| "Category: " ++ product.category.name ]
         ]
 
 
