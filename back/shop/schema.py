@@ -26,8 +26,9 @@ class ProductType(DjangoObjectType):
 
 
 class Query(graphene.ObjectType):
-    all_shops = graphene.List(ShopType)
-    all_products = graphene.List(ProductType)
+    all_shops = graphene.NonNull(graphene.List(graphene.NonNull(ShopType)))
+    all_products = graphene.NonNull(
+        graphene.List(graphene.NonNull(ProductType)))
 
     def resolve_all_shops(self, info, **kwargs):
         return Shop.objects.all()
