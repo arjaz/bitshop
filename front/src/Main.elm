@@ -4,11 +4,16 @@ module Main exposing (Model, Msg(..), init, main, update, view)
 -- import Shops.Object.ShopType
 -- import Http
 
+import Bootstrap.Button as Button
+import Bootstrap.CDN as CDN
+import Bootstrap.Card as Card
+import Bootstrap.Card.Block as Block
+import Bootstrap.Grid as Grid
 import Browser
 import Dict exposing (Dict)
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation, RootQuery)
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -115,7 +120,13 @@ postShopMutation name slug =
 
 type alias Model =
     { shopsData : RemoteData (Graphql.Http.Error Response) Response
-    , productInputs : Dict String { name : String, slug : String, stock : Int, price : Int }
+    , productInputs :
+        Dict String
+            { name : String
+            , slug : String
+            , stock : Int
+            , price : Int
+            }
     , shopInput :
         Maybe
             { name : String
@@ -354,8 +365,8 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ h1 [] [ text "Shops" ]
+    Grid.container []
+        [ CDN.stylesheet
         , viewModel model
         , viewShopForm model
         ]
@@ -365,16 +376,22 @@ viewModel : Model -> Html Msg
 viewModel model =
     case model.shopsData of
         NotAsked ->
-            text "The shops are not requested yet"
+            Card.config []
+                |> Card.block [] [ Block.text [] [ text "The shops are not requested yet" ] ]
+                |> Card.view
 
         Success response ->
             viewShops model response
 
         Loading ->
-            text "Loading"
+            Card.config []
+                |> Card.block [] [ Block.text [] [ text "The shops are loading..." ] ]
+                |> Card.view
 
         Failure _ ->
-            text "Error"
+            Card.config []
+                |> Card.block [] [ Block.text [] [ text "Error" ] ]
+                |> Card.view
 
 
 viewShops : Model -> Response -> Html Msg
@@ -384,32 +401,37 @@ viewShops model shops =
 
 viewShop : Model -> ShopInfo -> Html Msg
 viewShop model shop =
-    div [ class "shop-card" ]
-        [ text <| "Shop «" ++ shop.name ++ "»"
-        , ul [ class "products-list" ] <| List.map viewProduct shop.products
-        , viewProductForm model shop.id
-        ]
+    Card.config [ Card.attrs [ class "mt-4" ] ]
+        |> Card.header [ class "text-center " ] [ h2 [] [ text <| "Shop «" ++ shop.name ++ "»" ] ]
+        |> Card.block []
+            [ Block.custom << Card.columns <| List.map viewProduct shop.products
+            , Block.custom <|
+                viewProductForm
+                    model
+                    shop.id
+            ]
+        |> Card.view
 
 
 viewShopForm : Model -> Html Msg
 viewShopForm model =
-    div [ class "shop-form" ]
+    div [ class "shop-form text-center p-10" ]
         [ viewInput "text" "Shop name" (model.shopInput |> Maybe.map .name |> Maybe.withDefault "") ChangeShopName
         , viewInput "text" "Shop slug" (model.shopInput |> Maybe.map .slug |> Maybe.withDefault "") ChangeShopSlug
         , button [ onClick PostShop ] [ text "Add shop" ]
         ]
 
 
-viewProduct : ProductInfo -> Html Msg
+viewProduct : ProductInfo -> Card.Config Msg
 viewProduct product =
-    div []
-        [ div [ class "product-name" ] [ text <| "Product «" ++ product.name ++ "»" ]
-        , div [ class "product-stock" ] [ text <| "Quantity: " ++ String.fromInt product.stock ++ " items" ]
-        , div [ class "product-price" ] [ text <| "Price: " ++ String.fromInt product.price ++ " satoshi" ]
-        , button [ onClick <| BuyProduct product ] [ text "Buy" ]
-
-        -- , div [ class "category-name" ] [ text <| "Category: " ++ product.category.name ]
-        ]
+    Card.config [ Card.attrs [ class "mt-4" ] ]
+        |> Card.header [ class "text-center" ] [ h3 [] [ text <| "Product «" ++ product.name ++ "»" ] ]
+        |> Card.block []
+            [ Block.text [] [ text <| "Quantity: " ++ String.fromInt product.stock ++ " items" ]
+            , Block.text [] [ text <| "Price: " ++ String.fromInt product.price ++ " satoshi" ]
+            , Block.custom <|
+                Button.button [ Button.primary, Button.onClick <| BuyProduct product ] [ text "Buy" ]
+            ]
 
 
 viewProductForm : Model -> Shops.ScalarCodecs.Id -> Html Msg
@@ -418,7 +440,7 @@ viewProductForm model shopId =
         (Id shopIdString) =
             shopId
     in
-    div [ class "product-form" ]
+    div [ class "product-form text-center" ]
         [ viewInput
             "text"
             "Product name"
