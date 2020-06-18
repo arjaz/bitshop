@@ -396,7 +396,7 @@ viewShopForm model =
     div [ class "shop-form" ]
         [ viewInput "text" "Shop name" (model.shopInput |> Maybe.map .name |> Maybe.withDefault "") ChangeShopName
         , viewInput "text" "Shop slug" (model.shopInput |> Maybe.map .slug |> Maybe.withDefault "") ChangeShopSlug
-        , button [ onClick PostShop ] [ text "Submit" ]
+        , button [ onClick PostShop ] [ text "Add shop" ]
         ]
 
 
@@ -439,7 +439,7 @@ viewProductForm model shopId =
             "Product price"
             (String.fromInt (Maybe.map .price (Dict.get shopIdString model.productInputs) |> Maybe.withDefault 0))
             (String.toInt >> Maybe.withDefault 0 >> ChangeProductPrice shopIdString)
-        , button [ onClick <| PostProduct shopId ] [ text "Submit" ]
+        , button [ onClick <| PostProduct shopId ] [ text "Add product" ]
         ]
 
 
