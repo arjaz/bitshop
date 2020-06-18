@@ -63,6 +63,20 @@ class ShopMutation(graphene.Mutation):
         return ShopMutation(shop=shop)
 
 
+class BuyProductMutation(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    product = graphene.Field(ProductType)
+
+    def mutate(self, info, id):
+        product = Product.objects.get(pk=id)
+        if product.stock > 0:
+            product.stock -= 1
+        product.save()
+        return BuyProductMutation(product=product)
+
+
 class ProductMutation(graphene.Mutation):
     class Arguments:
         # id = graphene.ID()
@@ -91,6 +105,7 @@ class ProductMutation(graphene.Mutation):
 class Mutation(graphene.ObjectType):
     post_product = ProductMutation.Field()
     post_shop = ShopMutation.Field()
+    buy_product = BuyProductMutation.Field()
 
 
 schema = graphene.Schema(query=Query, mutation=Mutation)
