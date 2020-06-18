@@ -10,20 +10,102 @@ class ShopType(DjangoObjectType):
         model = Shop
 
 
+class WalletType(DjangoObjectType):
+    class Meta:
+        model = Wallet
+
+
+class CustomerType(DjangoObjectType):
+    class Meta:
+        model = Customer
+
+
 class ProductType(DjangoObjectType):
     class Meta:
         model = Product
 
 
-class Query(graphene.ObjectType):
-    shops = graphene.List(ShopType)
-    products = graphene.List(ProductType)
+class CategoryType(DjangoObjectType):
+    class Meta:
+        model = Category
 
-    def resolve_shops(self, info):
+
+class Query(graphene.ObjectType):
+    all_shops = graphene.NonNull(graphene.List(graphene.NonNull(ShopType)))
+    all_products = graphene.NonNull(
+        graphene.List(graphene.NonNull(ProductType)))
+
+    def resolve_all_shops(self, info, **kwargs):
         return Shop.objects.all()
 
-    def resolve_products(self, info):
+    def resolve_all_products(self, info, **kwargs):
         return Product.objects.all()
 
 
-schema = graphene.Schema(query=Query)
+class ShopMutation(graphene.Mutation):
+    class Arguments:
+        name = graphene.String(required=True)
+        slug = graphene.String(required=True)
+
+    shop = graphene.Field(ShopType)
+
+    def mutate(self, info, name, slug):
+        wallet = Wallet(value=0)
+        wallet.save()
+
+        shop = Shop(name=name, slug=slug, wallet=wallet)
+        shop.save()
+
+        # TODO: set the current user as a holder
+        holder = Customer.objects.all().first()
+        shop.holders.add(holder)
+
+        return ShopMutation(shop=shop)
+
+
+class BuyProductMutation(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    product = graphene.Field(ProductType)
+
+    def mutate(self, info, id):
+        product = Product.objects.get(pk=id)
+        if product.stock > 0:
+            product.stock -= 1
+        product.save()
+        return BuyProductMutation(product=product)
+
+
+class ProductMutation(graphene.Mutation):
+    class Arguments:
+        # id = graphene.ID()
+        name = graphene.String(required=True)
+        slug = graphene.String(required=True)
+        stock = graphene.Int(required=True)
+        price = graphene.Int(required=True)
+        shopId = graphene.ID(required=True)
+
+    product = graphene.Field(ProductType)
+
+    def mutate(self, info, name, slug, stock, price, shopId):
+        shop = Shop.objects.get(pk=shopId)
+        # TODO: Get category as well
+        category = Category.objects.all().first()
+        product = Product(name=name,
+                          slug=slug,
+                          stock=stock,
+                          price=price,
+                          shop=shop,
+                          category=category)
+        product.save()
+        return ProductMutation(product=product)
+
+
+class Mutation(graphene.ObjectType):
+    post_product = ProductMutation.Field()
+    post_shop = ShopMutation.Field()
+    buy_product = BuyProductMutation.Field()
+
+
+schema = graphene.Schema(query=Query, mutation=Mutation)
