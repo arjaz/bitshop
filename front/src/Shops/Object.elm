@@ -13,6 +13,10 @@ type CustomerType
     = CustomerType
 
 
+type ProductMutation
+    = ProductMutation
+
+
 type ProductType
     = ProductType
 
