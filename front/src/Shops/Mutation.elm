@@ -34,3 +34,29 @@ postProduct :
     -> SelectionSet (Maybe decodesTo) RootMutation
 postProduct requiredArgs object_ =
     Object.selectionForCompositeField "postProduct" [ Argument.required "name" requiredArgs.name Encode.string, Argument.required "price" requiredArgs.price Encode.int, Argument.required "shopId" requiredArgs.shopId (Shops.ScalarCodecs.codecs |> Shops.Scalar.unwrapEncoder .codecId), Argument.required "slug" requiredArgs.slug Encode.string, Argument.required "stock" requiredArgs.stock Encode.int ] object_ (identity >> Decode.nullable)
+
+
+type alias PostShopRequiredArguments =
+    { name : String
+    , slug : String
+    }
+
+
+postShop :
+    PostShopRequiredArguments
+    -> SelectionSet decodesTo Shops.Object.ShopMutation
+    -> SelectionSet (Maybe decodesTo) RootMutation
+postShop requiredArgs object_ =
+    Object.selectionForCompositeField "postShop" [ Argument.required "name" requiredArgs.name Encode.string, Argument.required "slug" requiredArgs.slug Encode.string ] object_ (identity >> Decode.nullable)
+
+
+type alias BuyProductRequiredArguments =
+    { id : Shops.ScalarCodecs.Id }
+
+
+buyProduct :
+    BuyProductRequiredArguments
+    -> SelectionSet decodesTo Shops.Object.BuyProductMutation
+    -> SelectionSet (Maybe decodesTo) RootMutation
+buyProduct requiredArgs object_ =
+    Object.selectionForCompositeField "buyProduct" [ Argument.required "id" requiredArgs.id (Shops.ScalarCodecs.codecs |> Shops.Scalar.unwrapEncoder .codecId) ] object_ (identity >> Decode.nullable)

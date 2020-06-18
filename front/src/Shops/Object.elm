@@ -5,6 +5,10 @@
 module Shops.Object exposing (..)
 
 
+type BuyProductMutation
+    = BuyProductMutation
+
+
 type CategoryType
     = CategoryType
 
@@ -19,6 +23,10 @@ type ProductMutation
 
 type ProductType
     = ProductType
+
+
+type ShopMutation
+    = ShopMutation
 
 
 type ShopType
