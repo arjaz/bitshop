@@ -1,11 +1,112 @@
 module Main exposing (Model, Msg(..), init, main, update, view)
 
+-- import Shops.Interface
+-- import Shops.Object.ShopType
+-- import Http
+
 import Browser
+import Dict exposing (Dict)
+import Graphql.Http
+import Graphql.Operation exposing (RootMutation, RootQuery)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import Http
-import Json.Decode exposing (Decoder, field, int, string)
+import RemoteData exposing (..)
+import Shops.Mutation as Mutation
+import Shops.Object
+import Shops.Object.CategoryType as Category
+import Shops.Object.ProductType as Product
+import Shops.Object.ShopType as Shop
+import Shops.Query as Query
+import Shops.Scalar exposing (Id(..))
+import Shops.ScalarCodecs
+
+
+
+-- GRAPH_QL
+{-
+   query {
+    shops {
+        id
+        name
+        slug
+        products {
+            id
+            name
+            slug
+            stock
+            price
+            category {
+                id
+                name
+                slug
+            }
+        }
+    }
+   }
+-}
+
+
+type alias Response =
+    List ShopInfo
+
+
+query : SelectionSet Response RootQuery
+query =
+    Query.allShops shopSelection
+
+
+shopSelection : SelectionSet ShopInfo Shops.Object.ShopType
+shopSelection =
+    SelectionSet.map4 ShopInfo
+        Shop.id
+        Shop.name
+        Shop.slug
+        (Shop.products productSelection)
+
+
+productSelection : SelectionSet ProductInfo Shops.Object.ProductType
+productSelection =
+    SelectionSet.map6 ProductInfo
+        Product.id
+        Product.name
+        Product.slug
+        Product.stock
+        Product.price
+        (Product.category categorySelection)
+
+
+categorySelection : SelectionSet CategoryInfo Shops.Object.CategoryType
+categorySelection =
+    SelectionSet.map3 CategoryInfo
+        Category.id
+        Category.name
+        Category.slug
+
+
+
+-- MUTATION
+
+
+postProductMutation : String -> String -> Int -> Int -> Shops.ScalarCodecs.Id -> SelectionSet (Maybe ()) RootMutation
+postProductMutation name slug stock price shopId =
+    Mutation.postProduct
+        { name = name, slug = slug, stock = stock, price = price, shopId = shopId }
+        SelectionSet.empty
+
+
+buyProductMutation : Shops.ScalarCodecs.Id -> SelectionSet (Maybe ()) RootMutation
+buyProductMutation id =
+    Mutation.buyProduct { id = id }
+        SelectionSet.empty
+
+
+postShopMutation : String -> String -> SelectionSet (Maybe ()) RootMutation
+postShopMutation name slug =
+    Mutation.postShop
+        { name = name, slug = slug }
+        SelectionSet.empty
 
 
 
@@ -13,52 +114,49 @@ import Json.Decode exposing (Decoder, field, int, string)
 
 
 type alias Model =
-    { shops : ShopsResult
+    { shopsData : RemoteData (Graphql.Http.Error Response) Response
+    , productInputs : Dict String { name : String, slug : String, stock : Int, price : Int }
+    , shopInput :
+        Maybe
+            { name : String
+            , slug : String
+            }
     }
 
 
-type ShopsResult
-    = ShopsFailure String
-    | ShopsLoading
-    | ShopsSuccess Shops
+type alias ShopInfo =
+    { id : Shops.ScalarCodecs.Id
+    , name : String
+    , slug : String
+    , products : List ProductInfo
+    }
 
 
-type alias Shop =
-    { id : Int
+type alias ProductInfo =
+    { id : Shops.ScalarCodecs.Id
+    , name : String
+    , slug : String
+    , stock : Int
+    , price : Int
+    , category : CategoryInfo
+    }
+
+
+type alias CategoryInfo =
+    { id : Shops.ScalarCodecs.Id
     , name : String
     , slug : String
     }
 
 
-type alias Shops =
-    List Shop
-
-
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { shops = ShopsLoading }, fetchShops )
-
-
-
--- HTTP
-
-
-fetchShops : Cmd Msg
-fetchShops =
-    Http.get
-        { url = "http://localhost:8000/api/shops/"
-        , expect = Http.expectJson FetchedShops shopsDecoder
-        }
-
-
-shopDecoder : Decoder Shop
-shopDecoder =
-    Json.Decode.map3 Shop (field "id" int) (field "name" string) (field "slug" string)
-
-
-shopsDecoder : Decoder Shops
-shopsDecoder =
-    field "results" (Json.Decode.list shopDecoder)
+    ( { shopsData = RemoteData.Loading
+      , productInputs = Dict.empty
+      , shopInput = Nothing
+      }
+    , makeShopsQueryRequest
+    )
 
 
 
@@ -66,33 +164,188 @@ shopsDecoder =
 
 
 type Msg
-    = FetchedShops (Result Http.Error Shops)
+    = GotResponse (RemoteData (Graphql.Http.Error Response) Response)
+    | GotProductPostResponse (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
+    | GotProductBuyResponse (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
+    | GotShopPostResponse (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
+    | ChangeProductName String String
+    | ChangeProductSlug String String
+    | ChangeProductStock String Int
+    | ChangeProductPrice String Int
+    | ChangeShopName String
+    | ChangeShopSlug String
+    | PostShop
+    | PostProduct Shops.ScalarCodecs.Id
+    | BuyProduct ProductInfo
+
+
+makeShopsQueryRequest : Cmd Msg
+makeShopsQueryRequest =
+    query
+        |> Graphql.Http.queryRequest "http://127.0.0.1:8000/graphql/"
+        |> Graphql.Http.send (RemoteData.fromResult >> GotResponse)
+
+
+makeProductPostRequest : String -> String -> Int -> Int -> Shops.ScalarCodecs.Id -> Cmd Msg
+makeProductPostRequest name slug stock price shopId =
+    postProductMutation name slug stock price shopId
+        |> Graphql.Http.mutationRequest "http://127.0.0.1:8000/graphql/"
+        |> Graphql.Http.send (RemoteData.fromResult >> GotProductPostResponse)
+
+
+makeProductBuyRequest : Shops.ScalarCodecs.Id -> Cmd Msg
+makeProductBuyRequest id =
+    buyProductMutation id
+        |> Graphql.Http.mutationRequest "http://127.0.0.1:8000/graphql/"
+        |> Graphql.Http.send (RemoteData.fromResult >> GotProductBuyResponse)
+
+
+makeShopPostRequest : String -> String -> Cmd Msg
+makeShopPostRequest name slug =
+    postShopMutation name slug
+        |> Graphql.Http.mutationRequest "http://127.0.0.1:8000/graphql/"
+        |> Graphql.Http.send (RemoteData.fromResult >> GotShopPostResponse)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        FetchedShops result ->
-            case result of
-                Ok shops ->
-                    ( { shops = ShopsSuccess shops }, Cmd.none )
+        GotResponse response ->
+            ( { model | shopsData = response }, Cmd.none )
 
-                Err err ->
-                    case err of
-                        Http.BadUrl url ->
-                            ( { shops = ShopsFailure url }, Cmd.none )
+        GotProductPostResponse _ ->
+            ( model, makeShopsQueryRequest )
 
-                        Http.Timeout ->
-                            ( { shops = ShopsFailure "timeout" }, Cmd.none )
+        GotProductBuyResponse _ ->
+            ( model, makeShopsQueryRequest )
 
-                        Http.NetworkError ->
-                            ( { shops = ShopsFailure "network error" }, Cmd.none )
+        GotShopPostResponse _ ->
+            ( model, makeShopsQueryRequest )
 
-                        Http.BadStatus status ->
-                            ( { shops = ShopsFailure (String.fromInt status) }, Cmd.none )
+        ChangeProductName shopIdString name ->
+            ( { model
+                | productInputs =
+                    Dict.update
+                        shopIdString
+                        (\maybeProduct ->
+                            case maybeProduct of
+                                Nothing ->
+                                    Just { name = name, slug = "", stock = 0, price = 0 }
 
-                        Http.BadBody body ->
-                            ( { shops = ShopsFailure body }, Cmd.none )
+                                Just product ->
+                                    Just { product | name = name }
+                        )
+                        model.productInputs
+              }
+            , Cmd.none
+            )
+
+        ChangeProductSlug shopIdString slug ->
+            ( { model
+                | productInputs =
+                    Dict.update
+                        shopIdString
+                        (\maybeProduct ->
+                            case maybeProduct of
+                                Nothing ->
+                                    Just { name = "", slug = slug, stock = 0, price = 0 }
+
+                                Just product ->
+                                    Just { product | slug = slug }
+                        )
+                        model.productInputs
+              }
+            , Cmd.none
+            )
+
+        ChangeProductStock shopIdString amount ->
+            ( { model
+                | productInputs =
+                    Dict.update
+                        shopIdString
+                        (\maybeProduct ->
+                            case maybeProduct of
+                                Nothing ->
+                                    Just { name = "", slug = "", stock = amount, price = 0 }
+
+                                Just product ->
+                                    Just { product | stock = amount }
+                        )
+                        model.productInputs
+              }
+            , Cmd.none
+            )
+
+        ChangeProductPrice shopIdString price ->
+            ( { model
+                | productInputs =
+                    Dict.update
+                        shopIdString
+                        (\maybeProduct ->
+                            case maybeProduct of
+                                Nothing ->
+                                    Just { name = "", slug = "", stock = 0, price = price }
+
+                                Just product ->
+                                    Just { product | price = price }
+                        )
+                        model.productInputs
+              }
+            , Cmd.none
+            )
+
+        ChangeShopName name ->
+            let
+                oldInput =
+                    model.shopInput
+
+                newInput =
+                    case oldInput of
+                        Nothing ->
+                            Just { name = name, slug = "" }
+
+                        Just shopInput ->
+                            Just { shopInput | name = name }
+            in
+            ( { model | shopInput = newInput }, Cmd.none )
+
+        ChangeShopSlug slug ->
+            let
+                oldInput =
+                    model.shopInput
+
+                newInput =
+                    case oldInput of
+                        Nothing ->
+                            Just { name = "", slug = slug }
+
+                        Just shopInput ->
+                            Just { shopInput | slug = slug }
+            in
+            ( { model | shopInput = newInput }, Cmd.none )
+
+        PostShop ->
+            let
+                shopName =
+                    model.shopInput |> Maybe.map .name |> Maybe.withDefault ""
+
+                shopSlug =
+                    model.shopInput |> Maybe.map .slug |> Maybe.withDefault ""
+            in
+            ( { model | shopInput = Nothing }, makeShopPostRequest shopName shopSlug )
+
+        PostProduct ((Id shopIdString) as shopId) ->
+            ( { model | productInputs = Dict.update shopIdString (\_ -> Just { name = "", slug = "", stock = 1, price = 100 }) model.productInputs }
+            , makeProductPostRequest
+                (Maybe.withDefault "" <| Maybe.map .name (Dict.get shopIdString model.productInputs))
+                (Maybe.withDefault "" <| Maybe.map .slug (Dict.get shopIdString model.productInputs))
+                (Maybe.withDefault 0 <| Maybe.map .stock (Dict.get shopIdString model.productInputs))
+                (Maybe.withDefault 0 <| Maybe.map .price (Dict.get shopIdString model.productInputs))
+                shopId
+            )
+
+        BuyProduct product ->
+            ( model, makeProductBuyRequest product.id )
 
 
 
@@ -103,30 +356,102 @@ view : Model -> Html Msg
 view model =
     div []
         [ h1 [] [ text "Shops" ]
-        , viewShops model
+        , viewModel model
+        , viewShopForm model
         ]
 
 
-viewShops : Model -> Html Msg
-viewShops model =
-    case model.shops of
-        ShopsFailure err ->
-            div [] [ text ("Failed to load shops: " ++ err) ]
+viewModel : Model -> Html Msg
+viewModel model =
+    case model.shopsData of
+        NotAsked ->
+            text "The shops are not requested yet"
 
-        ShopsLoading ->
-            div [] [ text "ShopsLoading..." ]
+        Success response ->
+            viewShops model response
 
-        ShopsSuccess shops ->
-            div [] [ ul [] (List.map (\shop -> li [] [ text shop ]) (List.map .name shops)) ]
+        Loading ->
+            text "Loading"
+
+        Failure _ ->
+            text "Error"
 
 
+viewShops : Model -> Response -> Html Msg
+viewShops model shops =
+    ul [ class "shops-list" ] <| List.map (viewShop model) shops
 
--- SUBSCRIPTIONS
+
+viewShop : Model -> ShopInfo -> Html Msg
+viewShop model shop =
+    div [ class "shop-card" ]
+        [ text <| "Shop «" ++ shop.name ++ "»"
+        , ul [ class "products-list" ] <| List.map viewProduct shop.products
+        , viewProductForm model shop.id
+        ]
 
 
-subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
+viewShopForm : Model -> Html Msg
+viewShopForm model =
+    div [ class "shop-form" ]
+        [ viewInput "text" "Shop name" (model.shopInput |> Maybe.map .name |> Maybe.withDefault "") ChangeShopName
+        , viewInput "text" "Shop slug" (model.shopInput |> Maybe.map .slug |> Maybe.withDefault "") ChangeShopSlug
+        , button [ onClick PostShop ] [ text "Add shop" ]
+        ]
+
+
+viewProduct : ProductInfo -> Html Msg
+viewProduct product =
+    div []
+        [ div [ class "product-name" ] [ text <| "Product «" ++ product.name ++ "»" ]
+        , div [ class "product-stock" ] [ text <| "Quantity: " ++ String.fromInt product.stock ++ " items" ]
+        , div [ class "product-price" ] [ text <| "Price: " ++ String.fromInt product.price ++ " satoshi" ]
+        , button [ onClick <| BuyProduct product ] [ text "Buy" ]
+
+        -- , div [ class "category-name" ] [ text <| "Category: " ++ product.category.name ]
+        ]
+
+
+viewProductForm : Model -> Shops.ScalarCodecs.Id -> Html Msg
+viewProductForm model shopId =
+    let
+        (Id shopIdString) =
+            shopId
+    in
+    div [ class "product-form" ]
+        [ viewInput
+            "text"
+            "Product name"
+            (Maybe.map .name (Dict.get shopIdString model.productInputs) |> Maybe.withDefault "")
+            (ChangeProductName shopIdString)
+        , viewInput
+            "text"
+            "Product slug"
+            (Maybe.map .slug (Dict.get shopIdString model.productInputs) |> Maybe.withDefault "")
+            (ChangeProductSlug shopIdString)
+        , viewInput
+            "text"
+            "Product stock"
+            (String.fromInt (Maybe.map .stock (Dict.get shopIdString model.productInputs) |> Maybe.withDefault 0))
+            (String.toInt >> Maybe.withDefault 0 >> ChangeProductStock shopIdString)
+        , viewInput
+            "text"
+            "Product price"
+            (String.fromInt (Maybe.map .price (Dict.get shopIdString model.productInputs) |> Maybe.withDefault 0))
+            (String.toInt >> Maybe.withDefault 0 >> ChangeProductPrice shopIdString)
+        , button [ onClick <| PostProduct shopId ] [ text "Add product" ]
+        ]
+
+
+viewInput : String -> String -> String -> (String -> msg) -> Html msg
+viewInput t p v toMsg =
+    input
+        [ type_ t
+        , placeholder p
+        , value v
+        , onInput toMsg
+        ]
+        []
 
 
 
@@ -134,4 +459,9 @@ subscriptions _ =
 
 
 main =
-    Browser.element { init = init, update = update, view = view, subscriptions = subscriptions }
+    Browser.element
+        { init = init
+        , update = update
+        , subscriptions = \_ -> Sub.none
+        , view = view
+        }
